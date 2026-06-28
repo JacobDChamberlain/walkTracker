@@ -17,6 +17,7 @@ const els = {
   searchClear: document.getElementById("search-clear"),
   searchResults: document.getElementById("search-results"),
   locateBtn: document.getElementById("locate-btn"),
+  themeBtn: document.getElementById("theme-btn"),
   distMiles: document.getElementById("dist-miles"),
   distKm: document.getElementById("dist-km"),
   distanceWrap: document.querySelector(".distance"),
@@ -41,11 +42,32 @@ function showToast(message, ms = 3200) {
   }, ms);
 }
 
+// --- Theme (light/dark) ----------------------------------------------------
+// Default to dark; remember the user's choice across visits.
+const THEME_KEY = "walktracker-theme";
+let theme = "dark";
+try {
+  theme = localStorage.getItem(THEME_KEY) || "dark";
+} catch { /* localStorage unavailable (e.g. private mode) — stick with dark */ }
+document.body.classList.toggle("light", theme === "light");
+
 // --- Map + route setup -----------------------------------------------------
 const map = createMapProvider(els.map, {
   center: DEFAULT_LOCATION,
   zoom: DEFAULT_ZOOM,
+  theme,
 });
+
+function applyTheme(next) {
+  theme = next;
+  document.body.classList.toggle("light", next === "light");
+  map.setTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+}
+
+els.themeBtn.addEventListener("click", () =>
+  applyTheme(theme === "light" ? "dark" : "light")
+);
 
 const route = createRoute(map, { onChange: onRouteChange, onLongJump: onLongJump });
 

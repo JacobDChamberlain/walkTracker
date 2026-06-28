@@ -24,13 +24,15 @@
 // back to standard OSM raster tiles if CARTO fails to load.
 const CARTO_DARK_URL =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const CARTO_LIGHT_URL =
+  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const CARTO_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 const OSM_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-export function createMapProvider(containerEl, { center, zoom }) {
+export function createMapProvider(containerEl, { center, zoom, theme = "dark" }) {
   const map = L.map(containerEl, {
     center: [center.lat, center.lng],
     zoom,
@@ -41,20 +43,29 @@ export function createMapProvider(containerEl, { center, zoom }) {
 
   L.control.zoom({ position: "bottomleft" }).addTo(map);
 
-  // Primary dark tiles, with a graceful fall-back to OSM on error.
-  const tiles = L.tileLayer(CARTO_DARK_URL, {
-    attribution: CARTO_ATTRIBUTION,
-    maxZoom: 20,
-    subdomains: "abcd",
-  });
-  let switchedToFallback = false;
-  tiles.on("tileerror", () => {
-    if (switchedToFallback) return;
-    switchedToFallback = true;
-    map.removeLayer(tiles);
-    L.tileLayer(OSM_URL, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map);
-  });
-  tiles.addTo(map);
+  // CARTO tiles matching the requested theme, with a graceful fall-back to
+  // standard OSM raster tiles if CARTO can't be reached.
+  let currentTiles = null;
+  function buildTiles(themeName) {
+    const url = themeName === "light" ? CARTO_LIGHT_URL : CARTO_DARK_URL;
+    const layer = L.tileLayer(url, {
+      attribution: CARTO_ATTRIBUTION,
+      maxZoom: 20,
+      subdomains: "abcd",
+    });
+    let switchedToFallback = false;
+    layer.on("tileerror", () => {
+      if (switchedToFallback) return;
+      switchedToFallback = true;
+      map.removeLayer(layer);
+      currentTiles = L.tileLayer(OSM_URL, {
+        attribution: OSM_ATTRIBUTION,
+        maxZoom: 19,
+      }).addTo(map);
+    });
+    return layer;
+  }
+  currentTiles = buildTiles(theme).addTo(map);
 
   // The glowing path is two stacked polylines: a thick blurred halo beneath a
   // bright thin core. Kept in their own pane so the CSS blur filter applies
@@ -79,6 +90,14 @@ export function createMapProvider(containerEl, { center, zoom }) {
   return {
     setView(lat, lng, z) {
       map.setView([lat, lng], z ?? map.getZoom());
+    },
+
+    // Swap the basemap tiles between "dark" and "light". Adds the new layer
+    // before removing the old one to avoid a flash of empty map.
+    setTheme(themeName) {
+      const next = buildTiles(themeName).addTo(map);
+      if (currentTiles) map.removeLayer(currentTiles);
+      currentTiles = next;
     },
 
     onMapClick(cb) {

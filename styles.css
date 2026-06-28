@@ -22,6 +22,20 @@
   --sa-right: env(safe-area-inset-right, 0px);
 }
 
+/* Light theme — applied when <body> has the .light class. Overrides the
+   dark defaults above; the glowing-path accent stays teal in both themes. */
+body.light {
+  --bg: #eef1f5;
+  --panel: rgba(255, 255, 255, 0.92);
+  --panel-border: rgba(0, 0, 0, 0.1);
+  --text: #1f2937;
+  --text-dim: #6b7280;
+  --accent: #0d9488;
+  --accent-strong: #0f766e;
+  --danger: #dc2626;
+  --shadow: 0 8px 30px rgba(31, 41, 55, 0.18);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -47,6 +61,9 @@ html, body {
   color: var(--text-dim) !important;
 }
 .leaflet-control-attribution a { color: var(--accent) !important; }
+body.light .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
 
 /* --- Top bar: search + locate ------------------------------------------- */
 .top-bar {
@@ -137,6 +154,13 @@ html, body {
 .icon-btn.locating { color: var(--accent); }
 .icon-btn.locating svg { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Theme toggle shows the icon for the mode you'd switch TO:
+   dark mode shows the sun, light mode shows the moon. */
+#theme-btn .icon-moon { display: none; }
+#theme-btn .icon-sun { display: block; }
+body.light #theme-btn .icon-sun { display: none; }
+body.light #theme-btn .icon-moon { display: block; }
 
 /* --- Bottom panel: distance + controls ---------------------------------- */
 .bottom-panel {
